@@ -1,11 +1,10 @@
-const Customer = require('../models/userModel');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const pool = require('../../../config/db'); 
+const pool = require('../../../config/db');
 const saltRounds = 10;
 
 exports.createCustomer = async (req, res) => {
-  const { companyName, companyEmail, companyWebsite, username, userEmail, password, switchIps  } = req.body;
+  const { companyName, companyEmail, companyWebsite, username, userEmail, password, switchIps } = req.body;
   const hashedPassword = await bcrypt.hash(password, saltRounds);
 
   // Check for duplicate records
@@ -35,9 +34,19 @@ exports.createCustomer = async (req, res) => {
         duplicateFields: duplicateFields,
       });
     }
+    function generateCustomerId(companyName) {
+      // Take the first 4 letters of the companyName (or all if less than 4), convert to uppercase
+      const namePart = companyName.slice(0, 4).toUpperCase();
+      // Generate a random 4-digit number
+      const numberPart = Math.floor(1000 + Math.random() * 9000);
+      // Combine and return the customerId
+      return `${namePart}${numberPart}`;
+  }
+ const customerId = generateCustomerId(companyName)
     // Set default values if not provided
     const newCustomerData = {
       ...req.body,
+      customerId:customerId,
       password: hashedPassword,
       switchIps: JSON.stringify(switchIps || []), // Ensure it's a valid JSON array
       ipdbid: req.body.ipdbid || "id",
@@ -72,9 +81,9 @@ exports.CustomerLogin = async (req, res) => {
 
     // Check if customer exists in MySQL
     const query = "SELECT * FROM customer WHERE username = ?";
-    
+
     pool.query(query, [username], async (err, results) => {
-      
+
       if (err) {
         console.error("Database error:", err);
         return res.status(500).json({ error: "Internal server error" });
@@ -108,53 +117,53 @@ exports.CustomerLogin = async (req, res) => {
 };
 
 
-exports.getAllCustomer = (req, res) => {
-  Customer.getAllCustomer((err, results) => {
+exports.getCustomer = (req, res) => {
+  const id = req.params.id;
+  if (!id) {
+    return res.status(400).json({ error: "Customer ID is required" });
+  }
+
+  const query = "SELECT * FROM customer WHERE id = ?";
+
+  pool.query(query, [id], (err, results) => {
     if (err) {
-      res.status(500).send(err);
-    } else {
-      res.json({ results });
+      console.error("Error fetching customer data:", err);
+      return res.status(500).json({ error: "Internal server error" });
     }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "Customer not found" });
+    }
+
+    res.status(200).json({ customer: results[0] });
   });
 };
+
 
 exports.updateCustomer = (req, res) => {
-  const id = req.params.id;
-  const data = req.body
-  console.log(data);
+  const { id } = req.params;
+  const { switchIps } = req.body;
 
-  Customer.updateCustomer(id, data, (err, results) => {
+  // Validate input
+  if (!id || !switchIps || !Array.isArray(switchIps)) {
+    return res.status(400).json({ error: "Customer ID and switchIps (array) are required" });
+  }
+
+  const switchIpsString = JSON.stringify(switchIps); // Convert array to JSON string
+
+  const query = "UPDATE customer SET switchIps = ? WHERE id = ?";
+
+  pool.query(query, [switchIpsString, id], (err, results) => {
     if (err) {
-      res.status(500).send(err);
-    } else {
-      res.json(results[0] || {});
+      console.error("Error updating customer:", err);
+      return res.status(500).json({ error: "Internal server error" });
     }
-  })
-};
 
-
-exports.deleteCustomer = (req, res) => {
-  const id = req.params.id;
-  console.log(id);
-
-  Customer.deleteCustomer(id, (err, results) => {
-    if (err) {
-      res.status(500).send(err);
-    } else {
-      res.json(results[0] || {});
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: "Customer not found or no changes made" });
     }
-  })
-};
 
-exports.customerLogin = (req, res) => {
-  const customer = req.body;
-  console.log(customer);
-
-  Customer.createCustomer(customer, (err, results) => {
-    if (err) {
-      res.status(500).send(err);
-    } else {
-      res.json({ message: 'Customer added successfully', id: results.insertId });
-    }
+    res.status(200).json({ message: "Customer updated successfully" });
   });
 };
+
