@@ -8,7 +8,6 @@ exports.adminLogin = async (req, res) => {
         const { username, password, selectDepartment } = req.body;
 
         const [rows] = await pool.promise().query("SELECT * FROM admin WHERE email = ?", [username]);
-        console.log(rows);
 
         if (rows.length === 0) {
             return res.status(404).json({ message: "Admin not found" });
@@ -28,12 +27,12 @@ exports.adminLogin = async (req, res) => {
         }
 
         // Generate JWT token
-        const token = jwt.sign({ id: admin.id }, process.env.JWT_SECRET, { expiresIn: "24h" });
+        const token = jwt.sign({ id: admin.id, username: admin.email, role: admin.role, name: admin.fullName, }, process.env.JWT_SECRET, { expiresIn: "24h" });
 
         console.log("Generated Token:", token);
 
         // Set the token in a cookie
-        res.cookie("authToken", token, {
+        res.cookie("Token", token, {
             httpOnly: true,
             secure: false, // Set to true in production with HTTPS
             maxAge: 24 * 60 * 60 * 1000 // 24 hours
@@ -42,6 +41,7 @@ exports.adminLogin = async (req, res) => {
         // Admin Data Response
         const adminData = {
             username: admin.email,
+            name: admin.fullName,
             role: admin.role,
             id: admin.id
         };
@@ -202,8 +202,6 @@ exports.getAllSupportMember = async (req, res) => {
 };
 
 exports.updateSupportMember = async (req, res) => {
-    console.log("updtae");
-
     const { email, password } = req.body;
     const { id } = req.params;
 
@@ -422,8 +420,6 @@ exports.updateSaleMember = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 
-    console.log(req.body);
-
     pool.query(query, [memberData, id], (err, results) => {
         if (err) {
             console.error("Error fetching member data:", err);
@@ -457,7 +453,7 @@ exports.createLeadMember = async (req, res) => {
     const { email, password } = req.body;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     try {
-        const duplicateEmail = "SELECT * FROM leadmember WHERE email = ?"
+        const duplicateEmail = "SELECT * FROM lead_members WHERE email = ?"
         pool.query(duplicateEmail, [email], (err, result) => {
             if (err) {
                 console.error("Database error:", err);
@@ -472,7 +468,7 @@ exports.createLeadMember = async (req, res) => {
                 password: hashedPassword
             }
 
-            const insertQuery = "INSERT INTO leadmember SET ?";
+            const insertQuery = "INSERT INTO lead_members SET ?";
             pool.query(insertQuery, memberData, (err, results) => {
                 if (err) {
                     console.error("Insert error:", err);
@@ -488,7 +484,7 @@ exports.createLeadMember = async (req, res) => {
 };
 
 exports.getAllLeadMember = async (req, res) => {
-    const query = "SELECT * FROM leadmember";
+    const query = "SELECT * FROM lead_members";
     try {
         const [results] = await pool.promise().query(query);
         res.status(200).json({ members: results });
@@ -504,7 +500,7 @@ exports.updateLeadMember = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const duplicateEmailQuery = "SELECT * FROM leadmember WHERE email = ? AND id != ?";
+        const duplicateEmailQuery = "SELECT * FROM lead_members WHERE email = ? AND id != ?";
         const [existingUsers] = await pool.promise().query(duplicateEmailQuery, [email, id]);
 
         if (existingUsers.length > 0) {
@@ -518,7 +514,7 @@ exports.updateLeadMember = async (req, res) => {
             password: hashedPassword
         };
 
-        const updateQuery = "UPDATE leadmember SET ? WHERE id = ?";
+        const updateQuery = "UPDATE lead_members SET ? WHERE id = ?";
         const [updateResults] = await pool.promise().query(updateQuery, [memberData, id]);
 
         if (updateResults.affectedRows === 0) {
@@ -535,7 +531,7 @@ exports.updateLeadMember = async (req, res) => {
 
 exports.deleteLeadMember = async (req, res) => {
     const { id } = req.params
-    const query = "DELETE FROM `leadmember` WHERE id = ?"
+    const query = "DELETE FROM `lead_members` WHERE id = ?"
     try {
         const [results] = await pool.promise().query(query, [id]);
 
@@ -556,6 +552,7 @@ exports.deleteLeadMember = async (req, res) => {
 
 exports.createCCRate = async (req, res) => {
     const ccrates = req.body;
+    console.log(ccrates);
 
     if (!ccrates || Object.keys(ccrates).length === 0) {
         return res.status(400).json({ error: "Missing required data" });
@@ -583,6 +580,19 @@ exports.getAllCCRate = async (req, res) => {
     }
 }
 
+exports.getCCRate = async (req, res) => {
+    const { id } = req.params;
+    console.log("cc");
+
+    const query = "SELECT * FROM ccrate WHERE _id = ?";
+    try {
+        const [[results]] = await pool.promise().query(query, [id]);
+        res.status(200).json({ ccrates: results })
+    } catch (error) {
+        console.error("Database insert error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+}
 exports.updateCCRate = async (req, res) => {
     const { id } = req.params;
     try {
@@ -601,9 +611,33 @@ exports.updateCCRate = async (req, res) => {
     }
 };
 
+exports.deleteSpecialRate = async (req, res) => {
+    const { id } = req.params;
+    const updateFields = req.body;
+
+    try {
+        if (!id || Object.keys(updateFields).length === 0) {
+            return res.status(400).json({ message: "Missing ID or update data" });
+        }
+
+        const updateQuery = "UPDATE ccrate SET ? WHERE _id = ?";
+        const [updateResults] = await pool.promise().query(updateQuery, [updateFields, id]);
+
+        if (updateResults.affectedRows === 0) {
+            return res.status(404).json({ message: "ccrate not found" });
+        }
+
+        res.json({ message: "ccrate updated successfully" });
+    } catch (error) {
+        console.error("Error updating ccrate:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+
+};
+
 exports.deleteCCRate = async (req, res) => {
     const { id } = req.params
-    
+
     const query = "DELETE FROM `ccrate` WHERE _id = ?"
     try {
         const [results] = await pool.promise().query(query, [id]);
@@ -633,17 +667,32 @@ exports.createCLIRate = async (req, res) => {
 
     try {
         const [results] = await pool.promise().query(query, clirates);
-        res.json({ message: "CLIRate added successfully"});
+        res.json({ message: "CLIRate added successfully" });
     } catch (error) {
         console.error("Database insert error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 };
- 
+
 exports.getAllCLIRate = async (req, res) => {
     const query = "SELECT * FROM clirate";
     try {
         const [results] = await pool.promise().query(query);
+        res.status(200).json({ clirates: results })
+    } catch (error) {
+        console.error("Database insert error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+}
+
+exports.getCLIRate = async (req, res) => {
+    const { id } = req.params;
+    console.log("cli", id);
+
+    const query = "SELECT * FROM clirate WHERE _id = ?";
+    try {
+        const [[results]] = await pool.promise().query(query, [id]);
+        // console.log(results);
         res.status(200).json({ clirates: results })
     } catch (error) {
         console.error("Database insert error:", error);
@@ -671,7 +720,7 @@ exports.updateCLIRate = async (req, res) => {
 
 exports.deleteCLIRate = async (req, res) => {
     const { id } = req.params
-    
+
     const query = "DELETE FROM `clirate` WHERE _id = ?"
     try {
         const [results] = await pool.promise().query(query, [id]);
@@ -688,3 +737,84 @@ exports.deleteCLIRate = async (req, res) => {
     }
 };
 
+exports.createTargetedRate = async (req, res) => {
+    const targetedrate = req.body;
+    console.log(targetedrate);
+
+    if (!targetedrate || Object.keys(targetedrate).length === 0) {
+        return res.status(400).json({ error: "Missing required data" });
+    }
+
+    const query = "INSERT INTO targeted_rate SET ?";
+
+    try {
+        const [results] = await pool.promise().query(query, targetedrate);
+        res.json({ message: "Targeted Rate added successfully", id: results._id });
+    } catch (error) {
+        console.error("Database insert error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+exports.getTargetedRate = async (req, res) => {
+    const { id } = req.params;
+    console.log("targetrate", id);
+
+    const query = "SELECT * FROM targeted_rate WHERE _id = ?";
+    try {
+        const [[results]] = await pool.promise().query(query, [id]);
+        // console.log(results);
+        res.status(200).json({ Targetedrate: results })
+    } catch (error) {
+        console.error("Database insert error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+}
+
+exports.getAllTargetedRate = async (req, res) => {
+    const query = "SELECT * FROM targeted_rate";
+    try {
+        const [results] = await pool.promise().query(query);
+        res.status(200).json({ Targetedrate: results })
+    } catch (error) {
+        console.error("Database insert error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+}
+
+exports.updateTargetRate = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const updateQuery = "UPDATE targeted_rate SET ? WHERE _id = ?";
+        const [updateResults] = await pool.promise().query(updateQuery, [req.body, id]);
+
+        if (updateResults.affectedRows === 0) {
+            return res.status(404).json({ message: "targeted_rate not found" });
+        }
+
+        res.json({ message: "targeted_rate updated successfully" });
+
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+exports.deleteTargetedRate = async (req, res) => {
+    const { id } = req.params
+
+    const query = "DELETE FROM `targeted_rate` WHERE _id = ?"
+    try {
+        const [results] = await pool.promise().query(query, [id]);
+
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ message: "Rate not found" });
+        }
+
+        res.json({ message: "targeted rate deleted successfully" });
+
+    } catch (error) {
+        console.error("Error deleting rate:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};

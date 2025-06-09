@@ -11,7 +11,7 @@ const pool = mysql.createPool({
   password: '',
   database: process.env.DB_NAME,
 });
-
+ 
 // Initialize database
 pool.getConnection((err, connection) => {
   if (err) {
