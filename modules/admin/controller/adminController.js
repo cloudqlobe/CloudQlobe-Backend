@@ -818,3 +818,82 @@ exports.deleteTargetedRate = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+exports.createOfferRate = async (req, res) => {
+    const rate = req.body;
+
+    if (!rate || Object.keys(rate).length === 0) {
+        return res.status(400).json({ error: "Missing required data" });
+    }
+
+    const query = "INSERT INTO offer_rate SET ?";
+
+    try {
+        const [results] = await pool.promise().query(query, rate);
+        res.json({ message: "Offer Rate added successfully", id: results._id });
+    } catch (error) {
+        console.error("Database insert error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+exports.getOfferRate = async (req, res) => {
+    const { id } = req.params;
+
+    const query = "SELECT * FROM offer_rate WHERE _id = ?";
+    try {
+        const [[results]] = await pool.promise().query(query, [id]);
+        res.status(200).json({ offer: results })
+    } catch (error) {
+        console.error("Database insert error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+}
+
+exports.getAllOfferRate = async (req, res) => {
+    const query = "SELECT * FROM offer_rate";
+    try {
+        const [results] = await pool.promise().query(query);
+        res.status(200).json({ Offerrate: results })
+    } catch (error) {
+        console.error("Database insert error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+}
+
+exports.updateOfferRate = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const updateQuery = "UPDATE offer_rate SET ? WHERE _id = ?";
+        const [updateResults] = await pool.promise().query(updateQuery, [req.body, id]);
+
+        if (updateResults.affectedRows === 0) {
+            return res.status(404).json({ message: "offer_rate not found" });
+        }
+
+        res.json({ message: "offer_rate updated successfully" });
+
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+exports.deleteOfferRate = async (req, res) => {
+    const { id } = req.params
+
+    const query = "DELETE FROM `offer_rate` WHERE _id = ?"
+    try {
+        const [results] = await pool.promise().query(query, [id]);
+
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ message: "Rate not found" });
+        }
+
+        res.json({ message: "offer rate deleted successfully" });
+
+    } catch (error) {
+        console.error("Error deleting rate:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};

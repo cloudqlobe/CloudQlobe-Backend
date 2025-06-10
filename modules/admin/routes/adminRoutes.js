@@ -54,5 +54,10 @@ router.get('/targeted/rate/:id', AdminController.getTargetedRate);
 router.put('/targeted/rate/:id', AdminController.updateTargetRate);
 router.delete('/targeted/rate/:id', AdminController.deleteTargetedRate);
 
+router.post('/offer/rate', AdminController.createOfferRate);
+router.get('/offer/rate', AdminController.getAllOfferRate);
+router.get('/offer/rate/:id', AdminController.getOfferRate);
+router.put('/offer/rate/:id', AdminController.updateOfferRate);
+router.delete('/offer/rate/:id', AdminController.deleteOfferRate);
 
 module.exports = router;
