@@ -11,6 +11,7 @@ const admin = require('./modules/admin/routes/adminRoutes')
 const superAdmin = require('./modules/superAdmin/routes/adminRoutes')
 const member = require('./modules/member/routes/memberRoute')
 const auth = require('./middlewares/authRoutes');
+const pool = require('./config/db');
 
 dotenv.config();
 const app = express();
@@ -28,10 +29,22 @@ app.use(cors({
 }));
 
 
-// Schedule backup every 1 minute
+// Schedule backup every 24 minute
 cron.schedule('0 0 * * *', () => {
   console.log('⏱️ Running scheduled backup...');
   backupToExcel();
+});
+
+cron.schedule('0 0 * * *', async () => {
+  try {
+    await pool.promise().query(`
+      DELETE FROM login_tokens
+      WHERE expires_at < NOW() - INTERVAL 24 HOUR
+    `);
+    console.log('Old login tokens deleted');
+  } catch (err) {
+    console.error('Error deleting tokens:', err);
+  }
 });
 
 app.use('/auth', auth);

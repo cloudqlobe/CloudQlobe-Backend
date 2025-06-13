@@ -702,6 +702,7 @@ exports.getCLIRate = async (req, res) => {
 
 exports.updateCLIRate = async (req, res) => {
     const { id } = req.params;
+    
     try {
         const updateQuery = "UPDATE clirate SET ? WHERE _id = ?";
         const [updateResults] = await pool.promise().query(updateQuery, [req.body, id]);
@@ -773,7 +774,7 @@ exports.getTargetedRate = async (req, res) => {
 
 exports.getAllTargetedRate = async (req, res) => {
     const query = "SELECT * FROM targeted_rate";
-    try {
+    try { 
         const [results] = await pool.promise().query(query);
         res.status(200).json({ Targetedrate: results })
     } catch (error) {
@@ -784,6 +785,8 @@ exports.getAllTargetedRate = async (req, res) => {
 
 exports.updateTargetRate = async (req, res) => {
     const { id } = req.params;
+        console.log("id",id);
+    console.log("rate",req.body);
     try {
         const updateQuery = "UPDATE targeted_rate SET ? WHERE _id = ?";
         const [updateResults] = await pool.promise().query(updateQuery, [req.body, id]);

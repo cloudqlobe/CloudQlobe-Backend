@@ -254,3 +254,54 @@ exports.deleteCustomer = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+exports.transferManager = async (req, res) => {
+  const { customerId, userId, toManagerId, note,fromManager, toManager, date } = req.body;
+console.log(req.body);
+console.log("userId",userId);
+
+  try {
+    // Get current manager
+    const [customerRows] = await pool.promise().query(
+      'SELECT memberId FROM customer WHERE id = ?',
+      [userId]
+    );
+console.log("customerRows",customerRows);
+
+    if (customerRows.length === 0) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    const fromManagerId = customerRows[0].memberId;
+
+    // Update customer
+    await pool.promise().query(
+      'UPDATE customer SET memberId = ?, accountManager = ? WHERE id = ?',
+      [toManagerId, toManager, userId]
+    );
+
+    // Log transfer
+    await pool.promise().query(
+      `INSERT INTO manager_transfers (customerId, fromManagerId, toManagerId, note, fromManager, toManager, date, userId)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [customerId, fromManagerId, toManagerId, note, fromManager, toManager, date, userId]
+    );
+
+    res.json({ message: 'Manager transferred successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to transfer manager' });
+  }
+};
+
+exports.getManagerTransfers = async (req, res) => {
+  const query = "SELECT * FROM manager_transfers";
+  try {
+    const [results] = await pool.promise().query(query);
+    res.status(200).json({ transferManager: results });
+
+  } catch (error) {
+    console.error("Error fetching manager_transfers data:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};

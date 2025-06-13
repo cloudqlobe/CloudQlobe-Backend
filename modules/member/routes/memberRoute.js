@@ -100,6 +100,9 @@ router.get('/getFollowupsByCategory/:id', commonController.getFollowupsByCategor
 router.get('/followups/:id', commonController.getFollowups);
 router.put('/followups/:id', commonController.updateFollowHistory);
 
+router.post('/createcustomernotes', commonController.createCustomerNotes);
+router.get('/customernotes/:id', commonController.getCustomerNotes);
+
 router.post('/private_ccrates', commonController.createPrivateCCRate);
 router.get('/private_ccrates', commonController.getAllPrivateCCRate);
 router.get('/private_ccrates/:id', commonController.getPrivateCCRate);

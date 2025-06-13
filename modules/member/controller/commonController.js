@@ -508,6 +508,32 @@ exports.updateFollowHistory = async (req, res) => {
   }
 };
 
+exports.createCustomerNotes = async (req, res) => {
+  const notes = req.body;
+
+  const insertQuery = "INSERT INTO customernotes SET ?";
+  try {
+    const [results] = await pool.promise().query(insertQuery, [notes]);
+    res.status(200).json({ notes: results })
+  } catch (error) {
+    console.error("Database insert error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.getCustomerNotes = async (req, res) => {
+  const { id } = req.params;
+
+  const query = "SELECT * FROM customernotes WHERE userId = ?";
+  try {
+    const [results] = await pool.promise().query(query, [id]);
+    res.status(200).json({ notes: results })
+  } catch (error) {
+    console.error("Database insert error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 exports.createPrivateCCRate = async (req, res) => {
   const ccrate = req.body;
   console.log(ccrate);
