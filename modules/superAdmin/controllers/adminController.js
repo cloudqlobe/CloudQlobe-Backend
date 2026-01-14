@@ -1,150 +1,107 @@
 const pool = require('../../../config/db');
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const saltRounds = 10;
-const nodemailer = require("nodemailer");
-const crypto = require("crypto");
+const { adminWelcomeTemplate } = require('../../../utils/emailTemplates/superAdmin');
+const sendGMail = require('../../../utils/mailService');
+const jwt = require("jsonwebtoken");
 
-exports.superAdminLogin = async (req, res) => {
-  try {
-    const { username, password, selectDepartment } = req.body;
+exports.UpdateProfile = async (req, res) => {
+  const { name, email } = req.body;
+  const adminId = req.params.id; // should come from auth middleware
 
-    const [rows] = await pool.promise().query("SELECT * FROM superadmin WHERE email = ?", [username]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "SuperAdmin not found" });
-    }
-
-    const admin = rows[0];
-
-    if (selectDepartment !== admin.role) {
-      return res.status(403).json({ message: "Unauthorized department access" });
-    }
-
-    const isPasswordMatch = await bcrypt.compare(password, admin.password);
-    if (!isPasswordMatch) {
-      return res.status(401).json({ message: "Invalid password" });
-    }
-
-    // Generate a 6-digit token (e.g., 963585)
-    const numericToken = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Save token + expiry to DB or temporary table (example using a temp table)
-    const expiryTime = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes from now
-
-    await pool.promise().query(
-      `INSERT INTO login_tokens (admin_id, token, expires_at) VALUES (?, ?, ?)`,
-      [admin.id, numericToken, expiryTime]
-    );
-
-    // Send token via email using Nodemailer
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      auth: {
-        user: process.env.EMAIL,
-        pass: process.env.EMAIL_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      }
-    });
-
-    await transporter.sendMail({
-      from: `"Super Admin Login" <${process.env.EMAIL}>`,
-      to: admin.email,
-      subject: "Your Login Token",
-      text: `Your 6-digit login token is: ${numericToken}\n\nIt will expire in 3 minutes.`,
-    });
-
-    // Respond with success (but don't send token back to frontend)
-    return res.status(200).json({
-      message: "Token sent to email. Please enter the token to proceed.",
-      adminId: admin.id, // required for token verification step
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+  if (!name || !email) {
+    return res.status(400).json({ error: "Name and email are required" });
   }
-};
 
-exports.verifySuperAdminToken = async (req, res) => {
   try {
-    const { token, adminId } = req.body;
+    // Update in DB
+    const updateQuery = "UPDATE superadmin SET fullName = ?, email = ? WHERE id = ?";
+    await pool.promise().query(updateQuery, [name, email, adminId]);
 
-    if (!token || !adminId) {
-      return res.status(400).json({ message: "Token and admin ID are required" });
+    // Get updated record
+    const [rows] = await pool
+      .promise()
+      .query("SELECT id, fullName, email, role FROM superadmin WHERE id = ?", [adminId]);
+
+    const updatedUser = rows[0];
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "Super Admin not found" });
     }
 
-    // Fetch token from DB
-    const [tokenRows] = await pool.promise().query(
-      "SELECT * FROM login_tokens WHERE admin_id = ? AND token = ?",
-      [adminId, token]
+    // Generate fresh token with updated details
+    const sessionToken = jwt.sign(
+      {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.fullName,
+        role: updatedUser.role,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" }
     );
 
-    if (tokenRows.length === 0) {
-      return res.status(401).json({ message: "Invalid or already used token" });
-    }
-
-    if (tokenRows.length === 0) {
-      return res.status(401).json({ message: "Invalid token" });
-    }
-
-    const tokenEntry = tokenRows[0];
-    const now = new Date();
-
-    if (now > new Date(tokenEntry.expires_at)) {
-      await pool.promise().query("DELETE FROM login_tokens WHERE id = ?", [tokenEntry.id]);
-      return res.status(410).json({ message: "Token expired" }); // Changed status to 410
-    }
-
-
-    // Delete used token
-    await pool.promise().query("DELETE FROM login_tokens WHERE id = ?", [tokenEntry.id]);
-
-    // Fetch admin info
-    const [adminRows] = await pool.promise().query(
-      "SELECT * FROM superadmin WHERE id = ?",
-      [adminId]
-    );
-
-    if (adminRows.length === 0) {
-      return res.status(404).json({ message: "Admin not found" });
-    }
-
-    const admin = adminRows[0];
-
-    // Generate final session JWT token
-    const sessionToken = jwt.sign({ id: admin.id, username: admin.email, name: admin.fullName, role: admin.role, }, process.env.JWT_SECRET, {
-      expiresIn: "24h",
-    });
-    // Set cookie
-    res.cookie("Token", sessionToken, {
+    // Set new cookie
+    res.cookie("SuperAdminAuthToken", sessionToken, {
       httpOnly: true,
-      secure: false, // Set to true in production
+      secure: false, // true in production with HTTPS
       maxAge: 24 * 60 * 60 * 1000,
     });
 
-    // Send full admin data
-    const adminData = {
-      username: admin.email,
-      name: admin.fullName,
-      role: admin.role,
-      id: admin.id,
-    };
-
-    return res.status(200).json({
-      message: "Token verified. Admin authenticated.",
-      adminData,
+    // Send response with both user + token
+    res.json({
+      user: updatedUser,
+      token: sessionToken,
     });
   } catch (error) {
-    console.error("Token verification error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("Profile update error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.ChangePassword = async (req, res) => {
+
+  const { oldPassword, newPassword } = req.body;
+  const adminId = req.params.id;
+
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ error: "Old and new password are required" });
+  }
+
+  try {
+    // Get existing password hash
+    const [rows] = await pool
+      .promise()
+      .query("SELECT password FROM superadmin WHERE id = ?", [adminId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Admin not found" });
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, rows[0].password);
+    if (!isMatch) {
+      return res.status(400).json({ error: "Old password is incorrect" });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await pool
+      .promise()
+      .query("UPDATE superadmin SET password = ? WHERE id = ?", [
+        hashedPassword,
+        adminId,
+      ]);
+
+    res.json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Password change error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
 
 exports.createAdmin = async (req, res) => {
-  const { email, password } = req.body;
+  const { fullName, email, password, role, status } = req.body;
   const hashedPassword = await bcrypt.hash(password, saltRounds);
   try {
     const duplicateEmail = "SELECT * FROM admin WHERE email = ?"
@@ -157,10 +114,13 @@ exports.createAdmin = async (req, res) => {
         return res.status(409).json({ message: "Email Already Exists" });
       }
       const adminData = {
-        ...req.body,
-        password: hashedPassword
-      }
-      console.log(adminData);
+        fullName,
+        email,
+        password: hashedPassword,
+        role,
+        status,
+        created_at: new Date(),
+      };
 
       const insertQuery = "INSERT INTO admin SET ?";
       pool.query(insertQuery, adminData, (err, results) => {
@@ -171,6 +131,12 @@ exports.createAdmin = async (req, res) => {
         res.json({ message: "Admin added successfully", id: results });
       })
     })
+    await sendGMail({
+      to: email,
+      subject: "Welcome to CloudQlobe CRM - Admin Access",
+      html: adminWelcomeTemplate(fullName, email, password, role),
+    });
+
   } catch (error) {
     console.error("Error", error)
     res.status(500).json({ error: "Internal server error" });
@@ -256,9 +222,7 @@ exports.deleteCustomer = async (req, res) => {
 };
 
 exports.transferManager = async (req, res) => {
-  const { customerId, userId, toManagerId, note,fromManager, toManager, date } = req.body;
-console.log(req.body);
-console.log("userId",userId);
+  const { customerId, userId, toManagerId, note, fromManager, toManager, date } = req.body;
 
   try {
     // Get current manager
@@ -266,7 +230,6 @@ console.log("userId",userId);
       'SELECT memberId FROM customer WHERE id = ?',
       [userId]
     );
-console.log("customerRows",customerRows);
 
     if (customerRows.length === 0) {
       return res.status(404).json({ message: 'Customer not found' });

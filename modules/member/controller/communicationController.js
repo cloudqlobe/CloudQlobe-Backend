@@ -43,8 +43,8 @@ exports.updateMemberEnquiryId = async (req, res) => {
   const { enquiryId } = req.body;
   const { id } = req.params;
 
-  const fetchQuery = "SELECT enquiry_ids FROM lead_members WHERE id = ?";
-  const updateQuery = "UPDATE lead_members SET enquiry_ids = ? WHERE id = ?";
+  const fetchQuery = "SELECT enquiry_ids FROM leadmember WHERE id = ?";
+  const updateQuery = "UPDATE leadmember SET enquiry_ids = ? WHERE id = ?";
 
   try {
     const [rows] = await pool.promise().query(fetchQuery, [id]);
@@ -89,8 +89,8 @@ exports.updateMemberDIDId = async (req, res) => {
   const { id } = req.params;
   console.log("updateMemberEnquiryId", didId, id);
 
-  const fetchQuery = "SELECT did_enquirie_ids FROM lead_members WHERE id = ?";
-  const updateQuery = "UPDATE lead_members SET did_enquirie_ids = ? WHERE id = ?";
+  const fetchQuery = "SELECT did_enquirie_ids FROM leadmember WHERE id = ?";
+  const updateQuery = "UPDATE leadmember SET did_enquirie_ids = ? WHERE id = ?";
 
   try {
     const [rows] = await pool.promise().query(fetchQuery, [id]);

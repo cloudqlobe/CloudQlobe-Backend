@@ -7,25 +7,30 @@ const communicationController = require('../controller/communicationController')
 const accountController = require('../controller/accountController') 
 const messageController = require('../controller/memberMessageController'); 
 const chatBotController = require('../controller/chatBotController'); 
+const authController = require('../controller/authController'); 
+const TeamManagementRoutes = require('../TeamManagement/routes/page')
 const { auth } = require('../../../middlewares/authMiddleware');
 
 // Add this to your backend routes
 router.get('/auth/check', auth); // More standard endpoint naming
 
-router.post('/logout', (req, res) => {
-    res.clearCookie('Token');
-    return res.status(200).json({ message: 'Logged out successfully' });
-});
+router.post('/login', authController.MemberLogin);
+router.post('/verify-token', authController.verifyMemberToken);
+router.post('/logout', authController.logout);
 
-//ChatBot
+//Team Management ...........................................
+
+router.use('/teamManagement', TeamManagementRoutes);
+
+//Team Management ...........................................
+
+//ChatBot 
 router.get('/chatbot/faq', chatBotController.getAllChatBotFaq);
 router.post('/chat/create', chatBotController.createChatBotMessage);
 router.get('/chat/messages', chatBotController.getAllChatBotMessages);
 router.patch('/chat/messages/read', chatBotController.updateMessageStatus );
 
- 
 //account
-router.post('/accountMember/login', accountController.memberLogin);
 router.get('/account/:id', accountController.getAccountMember);
 router.post('/Transactions',imageUpload,accountController.createTransaction)
 router.post('/VendorCreate',imageUpload,accountController.Vendorcreate)
@@ -43,6 +48,7 @@ router.put('/updateVendorStatus/:id', accountController.updateVentorStatus);
 router.put('/updatePrivateRate/:id',accountController.updateTestPrivateRateServiceEngineer)
 router.put('/updateMemberPrivateRateId/:id',accountController.updateMemberPrivateRateId)
 router.put('/updatePrivateRateStatus/:id', accountController.updatePrivateRateStatus);
+
 //overdraft
 router.post('/createOverdraft', accountController.createOverdraft);
 router.get('/getAllOverdraft',accountController.getAllOverdraft)
@@ -61,7 +67,6 @@ router.put('/updateMemberDIDId/:id', communicationController.updateMemberDIDId);
 router.put('/updateDidStatus/:id', communicationController.updateDIDStatus);
 
 //support
-router.post('/supportMember/login', supportController.supportMemberLogin);
 router.get('/support/:id', supportController.getSupportMember);
 router.get('/getTestingRateByMemberId/:id', supportController.getTestingRateByMemberId); 
 router.put('/updateMemberTest/:id', supportController.updateMemberTest);
@@ -79,15 +84,10 @@ router.post('/support/createcustomerfollowup', supportController.createCustomerF
 router.get('/fetchCustomerId', supportController.fetchCustomerId);
 
 //Lead
-router.post('/leadMember/login', commonController.leadMemberLogin);
 router.get('/leadMember/:id', commonController.getLeadMember);
 router.get('/myRates', commonController.getMyRate);
 router.get('/lead/:id', commonController.getLead);
-
-//Lead/Sale/Carrier
-router.post('/saleMember/login', commonController.saleMemberLogin);
-router.post('/carrierMember/login', commonController.carrierMemberLogin);
-
+ 
 router.post('/leadMember/NewLead', commonController.createNewLead);
 router.put('/updateLead/:id', commonController.updateCustomer);
 router.put('/leadStatus/:id', commonController.updateLeadStatus);
@@ -121,7 +121,6 @@ router.get('/getCarriersMessage', messageController.getCarriersMessage);
 router.get('/getAccountsMessage', messageController.getAccountsMessage);
 router.post('/createMessage', messageController.postMessage);
 router.put('/markAsRead', messageController.markAsRead);
-router.put('/messageReply', messageController.messageReply);
 router.delete('/deleteMessage/:id', messageController.deleteMessage);
 
 module.exports = router;

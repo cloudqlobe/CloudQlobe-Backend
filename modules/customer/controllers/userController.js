@@ -3,126 +3,173 @@ const jwt = require('jsonwebtoken');
 const pool = require('../../../config/db');
 const { verifyPassword, hashPassword } = require('../utils/passwordUtils');
 const saltRounds = 10;
+const nodemailer = require('nodemailer');
 
 exports.createCustomer = async (req, res) => {
-  const { companyName, companyEmail, companyWebsite, username, userEmail, password, switchIps } = req.body;
-  const hashedPassword = await bcrypt.hash(password, saltRounds);
-  console.log(req.body);
+  try {
+    // Destructure the nested objects from frontend
+    const {
+      company: companyDetails,
+      user: userDetails,
+      technical: technicalDetails
+    } = req.body;
 
-  // Check for duplicate records
-  const duplicateCheckQuery = `
-        SELECT * FROM customer 
-        WHERE companyName = ? OR companyEmail = ? OR companyWebsite = ? OR username = ? OR userEmail = ?
+    // Validate required fields
+    if (!companyDetails?.companyName || !userDetails?.userEmail || !userDetails?.password) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Store plain password before hashing for email
+    const plainPassword = userDetails.password;
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(plainPassword, saltRounds);
+
+    // Check for duplicate records
+    const duplicateCheckQuery = `
+      SELECT * FROM customer 
+      WHERE companyName = ? OR companyEmail = ? OR username = ? OR userEmail = ?
     `;
 
-  pool.query(duplicateCheckQuery, [companyName, companyEmail, companyWebsite, username, userEmail], (err, results) => {
-    if (err) {
-      console.error("Database error:", err);
-      return res.status(500).json({ error: "Internal server error" });
-    }
-
-    if (results.length > 0) {
-      const duplicateFields = [];
-      results.forEach(customer => {
-        if (customer.companyName === companyName) duplicateFields.push("companyName");
-        if (customer.companyEmail === companyEmail) duplicateFields.push("companyEmail");
-        if (customer.companyWebsite === companyWebsite) duplicateFields.push("companyWebsite");
-        if (customer.username === username) duplicateFields.push("username");
-        if (customer.userEmail === userEmail) duplicateFields.push("userEmail");
-      });
-
-      return res.status(400).json({
-        error: "Duplicate data found",
-        duplicateFields: duplicateFields,
-      });
-    }
-    function generateCustomerId(companyName) {
-      const namePart = companyName.slice(0, 4).toUpperCase();
-      const numberPart = Math.floor(1000 + Math.random() * 9000);
-      return `${namePart}${numberPart}`;
-    }
-    const customerId = generateCustomerId(companyName)
-    console.log(companyName, customerId);
-    console.log(generateCustomerId);
-
-    const newCustomerData = {
-      ...req.body,
-      customerId: customerId,
-      password: hashedPassword,
-      switchIps: JSON.stringify(switchIps || []), // Ensure it's a valid JSON array
-      customerType: req.body.customerType || "Lead",
-      customerStatus: req.body.customerStatus || "active",
-      leadStatus: req.body.leadStatus || "new",
-      leadType: req.body.leadType || "New lead",
-    };
-
-    // Insert new customer into the database
-    const insertQuery = "INSERT INTO customer SET ?";
-
-    pool.query(insertQuery, newCustomerData, (err, results) => {
-      if (err) {
-        console.error("Insert error:", err);
-        return res.status(500).send(err);
-      }
-
-      // Send welcome email after successful insertion
-      // sendEmail(userEmail, userFirstname, results.insertId, password);
-      // sendWelcomeEmail(userEmail, results.insertId);
-
-      res.json({ message: "Customer added successfully", id: results.insertId });
-    });
-  });
-};
-
-
-exports.CustomerLogin = async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    // Check if customer exists in MySQL
-    const query = "SELECT * FROM customer WHERE username = ?";
-
-    pool.query(query, [username], async (err, results) => {
-
+    pool.query(duplicateCheckQuery, [
+      companyDetails.companyName,
+      companyDetails.companyEmail,
+      userDetails.username,
+      userDetails.userEmail
+    ], async (err, results) => {
       if (err) {
         console.error("Database error:", err);
         return res.status(500).json({ error: "Internal server error" });
       }
 
-      if (results.length === 0) {
-        return res.status(404).json({ error: "Customer not found" });
+      if (results.length > 0) {
+        const duplicateFields = [];
+        results.forEach(customer => {
+          if (customer.companyName === companyDetails.companyName) duplicateFields.push("companyName");
+          if (customer.companyEmail === companyDetails.companyEmail) duplicateFields.push("companyEmail");
+          if (customer.username === userDetails.username) duplicateFields.push("username");
+          if (customer.userEmail === userDetails.userEmail) duplicateFields.push("userEmail");
+        });
+
+        return res.status(400).json({
+          error: "Duplicate data found",
+          duplicateFields: [...new Set(duplicateFields)],
+        });
       }
 
-      const customer = results[0];
+      // Generate customer ID
+      const generateCustomerId = (companyName) => {
+        const namePart = companyName.slice(0, 4).toUpperCase();
+        const numberPart = Math.floor(1000 + Math.random() * 9000);
+        return `${namePart}${numberPart}`;
+      };
 
-      // Verify password
-      const isMatch = await bcrypt.compare(password, customer.password);
-      if (!isMatch) {
-        return res.status(400).json({ error: "Invalid password" });
-      }
+      const customerId = generateCustomerId(companyDetails.companyName);
 
-      // Generate JWT token
-      const token = jwt.sign(
-        { id: customer.id, role: "user", customerId: customer.customerId, companyName: customer.companyName }, // Ensure your DB has `id` and `customerId` fields
-        process.env.JWT_SECRET,
-        { expiresIn: "24h" }
-      );
-      res.cookie("authToken", token, {
-        httpOnly: true,
-        secure: false, // Set to `true` in production with HTTPS
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      // Prepare data for insertion
+      const newCustomerData = {
+        // Company Details
+        ...companyDetails,
+        // User Details
+        ...userDetails,
+        userFirstname: userDetails.userFirstname,
+        userLastname: userDetails.userLastname,
+        userMobile: userDetails.userMobile,
+        designation: userDetails.designation,
+        // Technical Details
+        supportEmail: technicalDetails.supportEmail,
+        sipPort: technicalDetails.sipPort,
+        switchIps: JSON.stringify(technicalDetails.switchIps || []),
+        // System Fields
+        customerId,
+        password: hashedPassword,
+        customerType: req.body.customerType || "Lead",
+        customerStatus: req.body.customerStatus || "active",
+        leadStatus: req.body.leadStatus || "new",
+        leadType: req.body.leadType || "New lead",
+        createdAt: new Date(),
+      };
+
+      // Insert new customer
+      const insertQuery = "INSERT INTO customer SET ?";
+
+      pool.query(insertQuery, newCustomerData, (err, results) => {
+        if (err) {
+          console.error("Insert error:", err);
+          return res.status(500).json({
+            error: "Database insertion failed",
+            details: err.message
+          });
+        }
+
+        // Success response
+        res.status(201).json({
+          success: true,
+          message: "Customer created successfully",
+          customerId,
+          insertId: results.insertId
+        });
+
+        // Send welcome email with credentials
+        sendWelcomeEmail(
+          userDetails.userEmail,
+          {
+            customerId,
+            username: userDetails.username,
+            password: plainPassword,
+            companyName: companyDetails.companyName,
+            userFirstname: userDetails.userFirstname
+          }
+        );
       });
+    });
 
-      res.json({
-        message: "Login successful",
-        token // Still returning token in response for flexibility
-      });
-    })
   } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Error in createCustomer:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      details: error.message
+    });
   }
 };
+
+// Email sending function (example implementation)
+async function sendWelcomeEmail(email, credentials) {
+  const mailOptions = {
+    from: process.env.EMAIL,
+    to: email,
+    subject: 'Your Account Registration Details',
+    html: `
+      <h1>Welcome to Our Service!</h1>
+      <p>Dear ${credentials.userFirstname},</p>
+      <p>Your account has been successfully created with the following details:</p>
+      <ul>
+        <li><strong>Company Name:</strong> ${credentials.companyName}</li>
+        <li><strong>Customer ID:</strong> ${credentials.customerId}</li>
+        <li><strong>Username:</strong> ${credentials.username}</li>
+        <li><strong>Password:</strong> ${credentials.password}</li>
+      </ul>
+      <p>Please keep these credentials secure and do not share them with anyone.</p>
+      <p>Best regards,<br>Your Service Team</p>
+    `
+  };
+    const transporter = nodemailer.createTransport({
+      service: "Gmail",
+      auth: {
+        user: process.env.EMAIL,
+        pass: process.env.EMAIL_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      }
+    });
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Welcome email sent to:', email);
+  } catch (error) {
+    console.error('Error sending welcome email:', error);
+  }
+}
 
 exports.getAllCustomers = async (req, res) => {
   const query = "SELECT * FROM customer";
@@ -141,14 +188,16 @@ exports.getCustomer = (req, res) => {
   if (!id) {
     return res.status(400).json({ error: "Customer ID is required" });
   }
+console.log(id);
 
-  const query = "SELECT * FROM customer WHERE id = ?";
+  const query = "SELECT * FROM customer WHERE id = ?";;
 
   pool.query(query, [id], (err, results) => {
     if (err) {
       console.error("Error fetching customer data:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
+console.log(results);
 
     if (results.length === 0) {
       return res.status(404).json({ error: "Customer not found" });
@@ -264,7 +313,7 @@ exports.createTroubleTicket = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
+ 
 exports.getAllTroubleTicket = async (req, res) => {
   const query = "SELECT * FROM troubletickets";
   try {

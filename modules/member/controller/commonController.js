@@ -1,163 +1,6 @@
 const pool = require('../../../config/db');
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const saltRounds = 10;
-
-//Sale
-
-exports.saleMemberLogin = async (req, res) => {
-  try {
-    const { username, password, selectDepartment } = req.body;
-
-    const [rows] = await pool.promise().query("SELECT * FROM salemember WHERE email = ?", [username]);
-    console.log(rows);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Member not found" });
-    }
-
-    const admin = rows[0];
-
-    // Check if the department matches the role
-    if (selectDepartment !== admin.role) {
-      return res.status(404).json({ message: "Member not found" });
-    }
-
-    // Compare passwords (Using bcrypt for security)
-    const isPasswordMatch = await bcrypt.compare(password, admin.password);
-    if (!isPasswordMatch) {
-      return res.status(401).json({ message: "Invalid password" });
-    }
-
-    // Generate JWT token
-    const token = jwt.sign({ username: admin.email, id: admin.id, role: admin.role, name: admin.fullName }, process.env.JWT_SECRET, { expiresIn: "24h" });
-
-    console.log("Generated Token:", token);
-
-    // Set the token in a cookie
-    res.cookie("Token", token, {
-      httpOnly: true,
-      secure: false, // Set to `true` in production with HTTPS
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    });
-
-    // Admin Data Response
-    const adminData = {
-      username: admin.email,
-      name: admin.fullName,
-      role: admin.role,
-      id: admin.id
-    };
-
-    return res.status(200).json({ message: "Login successful", adminData });
-  } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-exports.carrierMemberLogin = async (req, res) => {
-  try {
-    const { username, password, selectDepartment } = req.body;
-
-    const [rows] = await pool.promise().query("SELECT * FROM carriermember WHERE email = ?", [username]);
-    console.log(rows);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Member not found" });
-    }
-
-    const admin = rows[0];
-
-    // Check if the department matches the role
-    if (selectDepartment !== admin.role) {
-      return res.status(404).json({ message: "Member not found" });
-    }
-
-    // Compare passwords (Using bcrypt for security)
-    const isPasswordMatch = await bcrypt.compare(password, admin.password);
-    if (!isPasswordMatch) {
-      return res.status(401).json({ message: "Invalid password" });
-    }
-
-    // Generate JWT token
-    const token = jwt.sign({ id: admin.id, username: admin.email, role: admin.role, name: admin.fullName, }, process.env.JWT_SECRET, { expiresIn: "24h" });
-
-    console.log("Generated Token:", token);
-
-    // Set the token in a cookie
-    res.cookie("Token", token, {
-      httpOnly: true,
-      secure: false, // Set to `true` in production with HTTPS
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    });
-
-    // Admin Data Response
-    const adminData = {
-      username: admin.email,
-      name: admin.fullName,
-      role: admin.role,
-      id: admin.id
-    };
-
-    return res.status(200).json({ message: "Login successful", adminData });
-  } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-//Lead
-
-exports.leadMemberLogin = async (req, res) => {
-  try {
-    const { username, password, selectDepartment } = req.body;
-
-    const [rows] = await pool.promise().query("SELECT * FROM lead_members WHERE email = ?", [username]);
-    console.log(rows);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Member not found" });
-    }
-
-    const admin = rows[0];
-
-    // Check if the department matches the role
-    if (selectDepartment !== admin.role) {
-      return res.status(404).json({ message: "Member not found" });
-    }
-
-    // Compare passwords (Using bcrypt for security)
-    const isPasswordMatch = await bcrypt.compare(password, admin.password);
-    if (!isPasswordMatch) {
-      return res.status(401).json({ message: "Invalid password" });
-    }
-
-    // Generate JWT token
-    const token = jwt.sign({ id: admin.id, username: admin.email, role: admin.role, name: admin.fullName, }, process.env.JWT_SECRET, { expiresIn: "24h" });
-    console.log("Generated Token:", token);
-
-    // Set the token in a cookie
-    res.cookie("Token", token, {
-      httpOnly: true,
-      secure: false, // Set to `true` in production with HTTPS
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    });
-
-    // Admin Data Response
-    const adminData = {
-      username: admin.email,
-      name: admin.fullName,
-      role: admin.role,
-      id: admin.id
-    };
-
-    return res.status(200).json({ message: "Login successful", adminData });
-  } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-};
 
 exports.getLead = async (req, res) => {
   const { id } = req.params;
@@ -179,7 +22,7 @@ exports.getLeadMember = async (req, res) => {
   const { id } = req.params;
   console.log(id);
 
-  const query = "SELECT * FROM lead_members WHERE id = ?";
+  const query = "SELECT * FROM leadmember WHERE id = ?";
   try {
     const [[results]] = await pool.promise().query(query, [id]);
     res.status(200).json({ member: results })
@@ -204,11 +47,11 @@ exports.updateLeadStatus = async (req, res) => {
 
 exports.LeadConversion = async (req, res) => {
   const { id } = req.params;
-  const { customerType, leadType, customerId } = req.body;
+  const { customerType, leadType,leadConvertTime, customerId } = req.body;
 
-  const updateQuery = `UPDATE customer SET customerType = ?, leadType = ?, customerId = ? WHERE id = ?`
+  const updateQuery = `UPDATE customer SET customerType = ?, leadType = ?, leadConvertTime = ?, customerId = ? WHERE id = ?`
   try {
-    const result = await pool.promise().query(updateQuery, [customerType, leadType, customerId, id]);
+    const result = await pool.promise().query(updateQuery, [customerType, leadType, leadConvertTime, customerId, id]);
     res.status(200).json({ message: "successFully update" })
   } catch (error) {
     console.error("error:", error);
@@ -284,7 +127,7 @@ exports.createNewLead = async (req, res) => {
       password: hashedPassword,
       switchIps: JSON.stringify(switchIps || []), // Ensure it's a valid JSON array
       customerType: req.body.customerType || "Lead",
-      customerStatus: req.body.customerStatus || "inactive",
+      customerStatus: req.body.customerStatus || "active",
       leadStatus: req.body.leadStatus || "new",
       leadType: req.body.leadType || "New lead",
     };
@@ -416,7 +259,7 @@ exports.getCustomerFollowups = async (req, res) => {
   const { id } = req.params;
   console.log(id);
 
-  const query = "SELECT * FROM customerfollowup WHERE customerId = ?";
+  const query = "SELECT * FROM customerfollowup WHERE userId = ?";
   try {
     const [results] = await pool.promise().query(query, [id]);
     res.status(200).json({ followups: results })
@@ -468,7 +311,7 @@ exports.createCustomerFollowup = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
+ 
 exports.updateFollowHistory = async (req, res) => {
   const { id } = req.params;
   const { followupHistory, followupMethod, followupStatus, nextFollowupTime } = req.body;
@@ -536,7 +379,6 @@ exports.getCustomerNotes = async (req, res) => {
 
 exports.createPrivateCCRate = async (req, res) => {
   const ccrate = req.body;
-  console.log(ccrate);
 
   const insertQuery = "INSERT INTO cc_private_rate SET ?";
   try {

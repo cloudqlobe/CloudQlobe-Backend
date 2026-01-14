@@ -1,8 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const AdminController = require('../controller/adminController') 
+const CarrierController = require('../controller/carrierController') 
+const supportController = require('../controller/supportController') 
+const SaleController = require('../controller/saleController') 
+const LeadController = require('../controller/leadController') 
+const AuthController = require('../controller/authController') 
+const TeamManagementRoutes = require('../TeamManagement/routes/page')
 
-router.post('/login', AdminController.adminLogin);
+router.post('/login', AuthController.adminLogin);
+router.post('/verify-token', AuthController.verifyAdminToken);
+router.post('/logout', AuthController.logout);
+
+//Team Management ...........................................
+
+router.use('/teamManagement', TeamManagementRoutes);
+
+//Team Management ...........................................
 
 //Members CRUD ............................................
 
@@ -11,25 +25,25 @@ router.get('/allaccountMember', AdminController.getAllMember);
 router.put('/updateaccountMember/:id', AdminController.updateMember);
 router.delete('/deleteaccountMember/:id', AdminController.deleteMember);
 
-router.post('/createsupportMember', AdminController.createSupportMember);
-router.get('/allsupportMember', AdminController.getAllSupportMember);
-router.put('/updatesupportMember/:id', AdminController.updateSupportMember);
-router.delete('/deletesupportMember/:id', AdminController.deleteSupportMember);
+router.post('/createsupportMember', supportController.createSupportMember);
+router.get('/allsupportMember', supportController.getAllSupportMember);
+router.put('/updatesupportMember/:id', supportController.updateSupportMember);
+router.delete('/deletesupportMember/:id', supportController.deleteSupportMember);
 
-router.post('/createcarrierMember', AdminController.createCarrierMember);
-router.get('/allcarrierMember', AdminController.getAllCarrierMember);
-router.put('/updatecarrierMember/:id', AdminController.updateCarrierMember);
-router.delete('/deletecarrierMember/:id', AdminController.deleteCarrierMember);
+router.post('/createcarrierMember', CarrierController.createCarrierMember);
+router.get('/allcarrierMember', CarrierController.getAllCarrierMember);
+router.put('/updatecarrierMember/:id', CarrierController.updateCarrierMember);
+router.delete('/deletecarrierMember/:id', CarrierController.deleteCarrierMember);
   
-router.post('/createleadMember', AdminController.createLeadMember);
-router.get('/allleadMember', AdminController.getAllLeadMember);
-router.put('/updateleadMember/:id', AdminController.updateLeadMember);
-router.delete('/deleteleadMember/:id', AdminController.deleteLeadMember);
+router.post('/createleadMember', LeadController.createLeadMember);
+router.get('/allleadMember', LeadController.getAllLeadMember);
+router.put('/updateleadMember/:id', LeadController.updateLeadMember);
+router.delete('/deleteleadMember/:id', LeadController.deleteLeadMember);
 
-router.post('/createsaleMember', AdminController.createSaleMember);
-router.get('/allsaleMember', AdminController.getAllSaleMember);
-router.put('/updatesaleMember/:id', AdminController.updateSaleMember);
-router.delete('/deletesaleMember/:id', AdminController.deleteSaleMember);
+router.post('/createsaleMember', SaleController.createSaleMember);
+router.get('/allsaleMember', SaleController.getAllSaleMember);
+router.put('/updatesaleMember/:id', SaleController.updateSaleMember);
+router.delete('/deletesaleMember/:id', SaleController.deleteSaleMember);
 
 //Members CRUD  ..............................................................
 
