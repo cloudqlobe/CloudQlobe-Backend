@@ -252,7 +252,7 @@ exports.forgotPassword = async (req, res) => {
             [user.id, 'customer', resetToken, expiresAt]
         );
 
-        const resetUrl = `${process.env.FRONTEND_URL}/customer/reset-password?token=${resetToken}`;
+        const resetUrl = `${process.env.CUSTOMER_FRONTEND_URLS}/customer/reset-password?token=${resetToken}`;
 
         const mailOptions = {
             from: `"${process.env.EMAIL_SENDER_NAME}" <${process.env.EMAIL_FROM}>`,
@@ -351,7 +351,6 @@ exports.resetPassword = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-
 
 exports.logout = (req, res) => {
     res.clearCookie('authToken', {

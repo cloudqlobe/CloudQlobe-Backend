@@ -36,11 +36,11 @@ exports.superAdminLogin = async (req, res) => {
     );
 
     // ✅ Send Email with Template
-    // await sendGMail({
-    //   to: admin.email,
-    //   subject: "🔐 Your SuperAdmin Login Token",
-    //   html: superAdminLoginTemplate(admin.fullName, numericToken, 3),
-    // });
+    await sendGMail({
+      to: admin.email,
+      subject: "🔐 Your SuperAdmin Login Token",
+      html: superAdminLoginTemplate(admin.fullName, numericToken, 3),
+    });
 
     return res.status(200).json({
       message: "Token sent to email. Please enter the token to proceed.",

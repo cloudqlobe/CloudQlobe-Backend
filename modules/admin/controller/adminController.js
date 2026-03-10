@@ -120,7 +120,6 @@ exports.createCCRate = async (req, res) => {
             "SELECT * FROM ccrate WHERE _id = ?",
             [results.insertId]
         );
-        console.log(rows[0]);
 
         if (rows.length === 0) {
             return res.status(404).json({ error: "CCRate not found after insert" });
@@ -247,12 +246,10 @@ exports.createCLIRate = async (req, res) => {
             "SELECT * FROM clirate WHERE _id = ?",
             [results.insertId]
         );
-console.log(rows);
 
         if (rows.length === 0) {
             return res.status(404).json({ error: "CLIRate not found after insert" });
         }
-console.log(rows[0]);
 
         res.json({ message: "CLIRate added successfully", clirate: rows[0] });
     } catch (error) {
@@ -274,12 +271,10 @@ exports.getAllCLIRate = async (req, res) => {
 
 exports.getCLIRate = async (req, res) => {
     const { id } = req.params;
-    console.log("cli", id);
 
     const query = "SELECT * FROM clirate WHERE _id = ?";
     try {
         const [[results]] = await pool.promise().query(query, [id]);
-        // console.log(results);
         res.status(200).json({ clirates: results })
     } catch (error) {
         console.error("Database insert error:", error);
@@ -335,7 +330,6 @@ exports.deleteCLIRate = async (req, res) => {
 
 exports.createTargetedRate = async (req, res) => {
     const targetedrate = req.body;
-    console.log(targetedrate);
 
     if (!targetedrate || Object.keys(targetedrate).length === 0) {
         return res.status(400).json({ error: "Missing required data" });
@@ -354,12 +348,10 @@ exports.createTargetedRate = async (req, res) => {
 
 exports.getTargetedRate = async (req, res) => {
     const { id } = req.params;
-    console.log("targetrate", id);
 
     const query = "SELECT * FROM targeted_rate WHERE _id = ?";
     try {
         const [[results]] = await pool.promise().query(query, [id]);
-        // console.log(results);
         res.status(200).json({ Targetedrate: results })
     } catch (error) {
         console.error("Database insert error:", error);
@@ -380,8 +372,6 @@ exports.getAllTargetedRate = async (req, res) => {
 
 exports.updateTargetRate = async (req, res) => {
     const { id } = req.params;
-    console.log("id", id);
-    console.log("rate", req.body);
     try {
         const updateQuery = "UPDATE targeted_rate SET ? WHERE _id = ?";
         const [updateResults] = await pool.promise().query(updateQuery, [req.body, id]);

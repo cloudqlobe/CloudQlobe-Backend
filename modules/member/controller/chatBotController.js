@@ -13,7 +13,6 @@ exports.getAllChatBotFaq = async (req, res) => {
   };
 
   exports.createChatBotMessage = async (req, res) => {
-    console.log("create chatbot message");
     
     const query = "INSERT INTO chatbot_messages SET ?"
     try {

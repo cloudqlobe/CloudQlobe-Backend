@@ -1,3 +1,5 @@
+
+
 const JWT = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -6,32 +8,40 @@ const JWT_SECRET = process.env.JWT_SECRET;
  * @param {Array} allowedRoles - Array of roles allowed to access the route
  */
 const auth = (allowedRoles = ['customer']) => {
+  
   return (req, res, next) => {
     try {
-      let tokenName = 'authToken'; // ✅ guest + customer use same token
+      // Determine token name based on allowed roles
+      let tokenName = 'authToken'; // Default for customers
 
       if (allowedRoles.includes('superAdmin')) {
         tokenName = 'SuperAdminAuthToken';
-      } else if (
-        allowedRoles.includes('admin') ||
+      }
+      else if (allowedRoles.includes('vendor')) {
+        tokenName = 'Ven-Au-To';
+      }
+
+      else if (allowedRoles.includes('admin') ||
         allowedRoles.some(role =>
           ['sale', 'lead', 'carrier', 'account', 'support'].includes(role)
-        )
-      ) {
+        )) {
         tokenName = 'AdminAuthToken';
       } else if (
         allowedRoles.some(role =>
-          ['salemember', 'leadmember', 'accountmember', 'supportmember', 'carriermember'].includes(role)
+          ['saleMember', 'leadmember', 'accountmember', 'supportmember'].includes(role)
         )
       ) {
         tokenName = 'MemberAuthToken';
       }
 
+
+      // Get token from cookies or Authorization header
       const token =
         req.cookies?.[tokenName] ||
         (req.headers.authorization?.startsWith('Bearer ')
           ? req.headers.authorization.split(' ')[1]
           : null);
+
 
       if (!token) {
         return res.status(401).json({
@@ -40,23 +50,26 @@ const auth = (allowedRoles = ['customer']) => {
         });
       }
 
+      // Verify token
       const decoded = JWT.verify(token, JWT_SECRET);
 
-      // ✅ Allow guest also
+      // Check allowed roles
       if (!allowedRoles.includes(decoded.role)) {
         return res.status(403).json({
           success: false,
-          message: `Access denied`,
+          message: `Access denied: Requires one of these roles - ${allowedRoles.join(', ')}`,
           data: decoded
         });
       }
 
+      // Attach user to request
       req.user = decoded;
       req.token = token;
-      req.tokenName = tokenName;
+      req.tokenName = tokenName
       next();
 
     } catch (error) {
+      console.error("Token verification failed:", error.message);
       return res.status(401).json({
         success: false,
         message: "Invalid or expired token"
@@ -65,20 +78,18 @@ const auth = (allowedRoles = ['customer']) => {
   };
 };
 
-
 // ✅ Specific role middlewares
-const guestAuth = auth(['guest']);
 const customerAuth = auth(['customer']);
-const adminAuth = auth(['sale', 'carrier','lead', 'account', 'support']);
+const vendorAuth = auth(['vendor']);
+const adminAuth = auth(['sale', 'carrier', 'lead', 'account', 'support']);
 const superAdminAuth = auth(['superAdmin']);
 const memberAuth = auth(['salemember', 'carriermember', 'leadmember', 'accountmember', 'supportmember']);
 
 module.exports = {
   customerAuth,
+  vendorAuth,
   adminAuth,
   superAdminAuth,
   memberAuth,
-  guestAuth,
   auth
 };
-

@@ -7,6 +7,7 @@ const cron = require('node-cron');
 const backupToExcel = require('./backup');
 
 const userRoutes = require('./modules/customer/routes/userRoutes');
+const vendorRoutes = require('./modules/vendor/routes/vendorRoutes');
 const admin = require('./modules/admin/routes/adminRoutes')
 const superAdmin = require('./modules/superAdmin/routes/adminRoutes')
 const member = require('./modules/member/routes/memberRoute')
@@ -22,11 +23,23 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true })); // Required for FormData
 app.use(bodyParser.json()); // Parse incoming JSON requests
 
+const allowedOrigins = process.env.FRONTEND_URLS.split(',');
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
+  origin: function (origin, callback) {
+    // allow server-to-server or Postman requests
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  exposedHeaders: ['Set-Cookie']
+  exposedHeaders: ['Set-Cookie', 'x-auth-token', 'x-auth-token-name'],
 }));
+
 
 
 // Schedule backup every 24 minute
@@ -49,6 +62,7 @@ cron.schedule('0 0 * * *', async () => {
 
 app.use('/auth', auth);
 app.use('/api', userRoutes);
+app.use('/api/vendor', vendorRoutes);
 app.use('/api/admin', admin);
 app.use('/api/member', member);
 app.use('/api/superAdmin', superAdmin);

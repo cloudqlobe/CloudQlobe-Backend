@@ -26,7 +26,6 @@ exports.getAllCustomerDidNumber = async (req, res) => {
 exports.updateEnquiry = async (req, res) => {
   const { id } = req.params;
   const { serviceEngineer } = req.body;
-  console.log("updateEnquiry", id, serviceEngineer);
 
   const updateTest = `UPDATE enquiry SET serviceEngineer = ? WHERE id = ?`
   try {
@@ -60,7 +59,6 @@ exports.updateMemberEnquiryId = async (req, res) => {
     // Convert back to JSON and update the database
     await pool.promise().query(updateQuery, [JSON.stringify(existingRates), id]);
 
-    console.log("Updated enquiryId:", existingRates);
     res.json({ success: true, message: "test pickup successfully." })
   } catch (error) {
     console.error("Server error:", error);
@@ -71,7 +69,6 @@ exports.updateMemberEnquiryId = async (req, res) => {
 exports.updateDID = async (req, res) => {
   const { id } = req.params;
   const { serviceEngineer } = req.body;
-  console.log("updateEnquiry", id, serviceEngineer);
 
   const updateDid = `UPDATE didnumber SET serviceEngineer = ? WHERE id = ?`
   try {
@@ -87,7 +84,6 @@ exports.updateDID = async (req, res) => {
 exports.updateMemberDIDId = async (req, res) => {
   const { didId } = req.body;
   const { id } = req.params;
-  console.log("updateMemberEnquiryId", didId, id);
 
   const fetchQuery = "SELECT did_enquirie_ids FROM leadmember WHERE id = ?";
   const updateQuery = "UPDATE leadmember SET did_enquirie_ids = ? WHERE id = ?";
@@ -106,7 +102,6 @@ exports.updateMemberDIDId = async (req, res) => {
     // Convert back to JSON and update the database
     await pool.promise().query(updateQuery, [JSON.stringify(existingRates), id]);
 
-    console.log("Updated enquiryId:", existingRates);
     res.json({ success: true, message: "test pickup successfully." })
   } catch (error) {
     console.error("Server error:", error);
@@ -117,13 +112,11 @@ exports.updateMemberDIDId = async (req, res) => {
 exports.updateEnquiryStatus = async (req, res) => {
   const { id } = req.params;
   const { newStatus } = req.body;
-  console.log(id, newStatus);
 
   const updateTest = `UPDATE enquiry SET status = ? WHERE id = ?`
   try {
     const results = await pool.promise().query(updateTest, [newStatus, id])
     res.status(200).json()
-    console.log(results);
 
   } catch (error) {
     console.error("Server error:", error);
@@ -134,13 +127,11 @@ exports.updateEnquiryStatus = async (req, res) => {
 exports.updateDIDStatus = async (req, res) => {
   const { id } = req.params;
   const { newStatus } = req.body;
-  console.log(id, newStatus);
 
   const updateTest = `UPDATE didnumber SET status = ? WHERE id = ?`
   try {
     const results = await pool.promise().query(updateTest, [newStatus, id])
     res.status(200).json()
-    console.log(results);
 
   } catch (error) {
     console.error("Server error:", error);

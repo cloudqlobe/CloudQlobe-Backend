@@ -37,7 +37,6 @@ async function sendVerificationEmail(email, token,name) {
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`Verification token sent to ${email}`);
     } catch (error) {
         console.error('Error sending verification email:', error);
         throw new Error('Failed to send verification email');
@@ -47,20 +46,14 @@ async function sendVerificationEmail(email, token,name) {
   exports.MemberLogin = async (req, res) => {
     try {
       const { username, password, selectDepartment } = req.body;
-      console.log(req.body);
       
       const [rows] = await pool.promise().query(`SELECT * FROM ${selectDepartment} WHERE email = ?`, [username]);
-
-      console.log(rows.length);
-
       if (rows.length === 0) {
         return res.status(404).json({ message: "Member not found" });
       }
 
       const member = rows[0];
-      console.log(member);
 
-      // Check if the department matches the role
       if (selectDepartment !== member.role) {
         return res.status(404).json({ message: "Member not found" });
       }
@@ -82,9 +75,7 @@ async function sendVerificationEmail(email, token,name) {
       );
 
       // In a real app, you would send this token via email/SMS
-      // await sendVerificationEmail(username, token, member.fullName);
-
-      console.log(`Token for ${member.email}: ${token}`);
+      await sendVerificationEmail(username, token, member.fullName);
 
       return res.status(200).json({
         message: "Token sent to your email",
@@ -101,7 +92,6 @@ async function sendVerificationEmail(email, token,name) {
   exports.verifyMemberToken = async (req, res) => {
     try {
       const { token, memberId, department } = req.body;
-      console.log("token", req.body);
 
       if (!token || !memberId) {
         return res.status(400).json({ message: "Token and member ID are required" });
@@ -112,8 +102,6 @@ async function sendVerificationEmail(email, token,name) {
         "SELECT * FROM login_tokens WHERE _id = ? AND token = ?",
         [memberId, token]
       );
-
-      console.log(tokenRows);
 
       if (tokenRows.length === 0) {
         return res.status(401).json({ message: "Invalid or already used token" });

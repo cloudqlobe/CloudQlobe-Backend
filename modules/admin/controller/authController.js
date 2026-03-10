@@ -15,9 +15,7 @@ exports.adminLogin = async (req, res) => {
         }
 
         const admin = rows[0];
-        console.log(admin);
 
-        // ✅ Check if admin status is inactive or blocked
         if (admin.status === "inactive" || admin.status === "block") {
             return res.status(402).json({
                 message: `This account is ${admin.status}. Please contact the Super Admin.`,
@@ -42,13 +40,12 @@ exports.adminLogin = async (req, res) => {
             `INSERT INTO login_tokens (_id, role, token, expires_at) VALUES (?, ?, ?, ?)`,
             [admin.id, selectDepartment, numericToken, expiryTime]
         );
-        console.log(numericToken);
 
-        // await sendGMail({
-        //     to: admin.email,
-        //     subject: "🔐 Your Admin Login Token",
-        //     html: AdminLoginTemplate(admin.fullName, numericToken, 3),
-        // });
+        await sendGMail({
+            to: admin.email,
+            subject: "🔐 Your Admin Login Token",
+            html: AdminLoginTemplate(admin.fullName, numericToken, 3),
+        });
 
         // Respond with success (but don't send token back to frontend)
         return res.status(200).json({

@@ -1,9 +1,5 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const pool = require('../../../config/db');
 const { verifyPassword, hashPassword } = require('../utils/passwordUtils');
-const saltRounds = 10;
-const nodemailer = require('nodemailer');
 
 exports.createCustomer = async (req, res) => {
   try {
@@ -15,19 +11,13 @@ exports.createCustomer = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!companyDetails?.companyName || !userDetails?.userEmail || !userDetails?.password) {
+    if (!companyDetails?.companyName || !userDetails?.userEmail) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Store plain password before hashing for email
-    const plainPassword = userDetails.password;
-
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(plainPassword, saltRounds);
-
     // Check for duplicate records
     const duplicateCheckQuery = `
-      SELECT * FROM customer 
+      SELECT * FROM leads 
       WHERE companyName = ? OR companyEmail = ? OR username = ? OR userEmail = ?
     `;
 
@@ -82,16 +72,13 @@ exports.createCustomer = async (req, res) => {
         switchIps: JSON.stringify(technicalDetails.switchIps || []),
         // System Fields
         customerId,
-        password: hashedPassword,
-        customerType: req.body.customerType || "Lead",
-        customerStatus: req.body.customerStatus || "active",
         leadStatus: req.body.leadStatus || "new",
-        leadType: req.body.leadType || "New lead",
+        leadType: "Customer lead",
         createdAt: new Date(),
       };
 
       // Insert new customer
-      const insertQuery = "INSERT INTO customer SET ?";
+      const insertQuery = "INSERT INTO leads SET ?";
 
       pool.query(insertQuery, newCustomerData, (err, results) => {
         if (err) {
@@ -109,18 +96,6 @@ exports.createCustomer = async (req, res) => {
           customerId,
           insertId: results.insertId
         });
-
-        // Send welcome email with credentials
-        sendWelcomeEmail(
-          userDetails.userEmail,
-          {
-            customerId,
-            username: userDetails.username,
-            password: plainPassword,
-            companyName: companyDetails.companyName,
-            userFirstname: userDetails.userFirstname
-          }
-        );
       });
     });
 
@@ -132,44 +107,6 @@ exports.createCustomer = async (req, res) => {
     });
   }
 };
-
-// Email sending function (example implementation)
-async function sendWelcomeEmail(email, credentials) {
-  const mailOptions = {
-    from: process.env.EMAIL,
-    to: email,
-    subject: 'Your Account Registration Details',
-    html: `
-      <h1>Welcome to Our Service!</h1>
-      <p>Dear ${credentials.userFirstname},</p>
-      <p>Your account has been successfully created with the following details:</p>
-      <ul>
-        <li><strong>Company Name:</strong> ${credentials.companyName}</li>
-        <li><strong>Customer ID:</strong> ${credentials.customerId}</li>
-        <li><strong>Username:</strong> ${credentials.username}</li>
-        <li><strong>Password:</strong> ${credentials.password}</li>
-      </ul>
-      <p>Please keep these credentials secure and do not share them with anyone.</p>
-      <p>Best regards,<br>Your Service Team</p>
-    `
-  };
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      auth: {
-        user: process.env.EMAIL,
-        pass: process.env.EMAIL_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      }
-    });
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log('Welcome email sent to:', email);
-  } catch (error) {
-    console.error('Error sending welcome email:', error);
-  }
-}
 
 exports.getAllCustomers = async (req, res) => {
   const query = "SELECT * FROM customer";
@@ -188,7 +125,6 @@ exports.getCustomer = (req, res) => {
   if (!id) {
     return res.status(400).json({ error: "Customer ID is required" });
   }
-console.log(id);
 
   const query = "SELECT * FROM customer WHERE id = ?";;
 
@@ -197,7 +133,6 @@ console.log(id);
       console.error("Error fetching customer data:", err);
       return res.status(500).json({ error: "Internal server error" });
     }
-console.log(results);
 
     if (results.length === 0) {
       return res.status(404).json({ error: "Customer not found" });
@@ -237,7 +172,6 @@ exports.updateSwitchIps = (req, res) => {
 
 exports.createMyRate = async (req, res) => {
   const { id } = req.params;
-  console.log("Received Data:", req.body);
 
   const fetchQuery = "SELECT myRates FROM customer WHERE id = ?";
   const updateQuery = "UPDATE customer SET myRates = ? WHERE id = ?";
@@ -258,7 +192,6 @@ exports.createMyRate = async (req, res) => {
     // Convert back to JSON and update the database
     await pool.promise().query(updateQuery, [JSON.stringify(existingRates), id]);
 
-    console.log("Updated myRates:", existingRates);
     res.json({ success: true, message: "Rates updated successfully." });
 
   } catch (error) {
@@ -313,7 +246,7 @@ exports.createTroubleTicket = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
- 
+
 exports.getAllTroubleTicket = async (req, res) => {
   const query = "SELECT * FROM troubletickets";
   try {
@@ -321,6 +254,32 @@ exports.getAllTroubleTicket = async (req, res) => {
     res.status(200).json({ troubletickets: results })
   } catch (error) {
     console.error("Database insert error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.getTroubleTicket = async (req, res) => {
+  try {
+    const { customerId } = req.query;
+
+    let query = "SELECT * FROM troubletickets";
+    const values = [];
+
+    if (customerId) {
+      query += " WHERE customerDBId = ?";
+      values.push(customerId);
+    }
+
+    query += " ORDER BY ticketTime DESC";
+
+    const [results] = await pool.promise().query(query, values);
+
+    res.status(200).json({
+      troubletickets: results,
+    });
+
+  } catch (error) {
+    console.error("Database fetch error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

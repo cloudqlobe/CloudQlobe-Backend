@@ -4,7 +4,6 @@ const jwt = require("jsonwebtoken");
 
   exports.getSupportMember = async (req, res) => {
     const { id } = req.params;
-    console.log(id);
   
     const query = "SELECT * FROM supportmember WHERE id = ?";
     try {
@@ -38,7 +37,6 @@ const jwt = require("jsonwebtoken");
       // Convert back to JSON and update the database
       await pool.promise().query(updateQuery, [JSON.stringify(existingRates), id]);
   
-      console.log("Updated testid:", existingRates);
       res.json({ success: true, message: "test pickup successfully." })
     } catch (error) {
       console.error("Server error:", error);
@@ -48,7 +46,6 @@ const jwt = require("jsonwebtoken");
   
     exports.getTestingRateByMemberId = async (req, res) => {
     const {id} = req.params;
-    console.log("id",id);
     
     const query = "SELECT * FROM testrate WHERE memberId = ?";
     try {
@@ -63,13 +60,11 @@ const jwt = require("jsonwebtoken");
   exports.updateTest = (req, res) => {
     const { id } = req.params;
     const { serviceEngineer, testStatus } = req.body;
-    console.log(serviceEngineer, testStatus);
   
     const updateTest = `UPDATE testrate SET serviceEngineer = ?, testStatus = ? WHERE id = ?`
     try {
       const results = pool.promise().query(updateTest, [serviceEngineer, testStatus, id])
       res.status(200).json()
-      console.log(results);
   
     } catch (error) {
       console.error("Server error:", error);
@@ -79,7 +74,6 @@ const jwt = require("jsonwebtoken");
   
   exports.gettestData = async (req, res) => {
     const { id } = req.params;
-    console.log(id);
   
     const query = "SELECT * FROM testrate";
     try {
@@ -94,7 +88,6 @@ const jwt = require("jsonwebtoken");
   exports.updateTestStatus = (req, res) => {
     const { id } = req.params;
     const { newStatus } = req.body;
-    console.log("newStatus", newStatus);
   
     const updateTest = `UPDATE testrate SET testStatus = ? WHERE id = ?`
     try {
@@ -109,7 +102,6 @@ const jwt = require("jsonwebtoken");
 
   exports.createMemberCustomerTroubleTicket = async (req, res) => {
     const newData = req.body;
-    console.log(newData);
     
     // Basic validation
     if (!newData.customerId || !newData.ticketDescription || !newData.memberId || !newData.accountManager) {
@@ -151,7 +143,6 @@ const jwt = require("jsonwebtoken");
 
     exports.getTroubleTicketByMemberId = async (req, res) => {
     const {id} = req.params;
-    console.log("id",id);
     
     const query = "SELECT * FROM troubletickets WHERE memberId = ?";
     try {
@@ -165,7 +156,6 @@ const jwt = require("jsonwebtoken");
     
   exports.getTroubleTicket = async (req, res) => {
     const {id} = req.params;
-    console.log("id",id);
     
     const query = "SELECT * FROM troubletickets WHERE UserId = ?";
     try {
@@ -180,14 +170,12 @@ const jwt = require("jsonwebtoken");
   exports.updateMemberTicket = async (req, res) => {
     const { id } = req.params;
     const { troubleTicketId } = req.body;
-    console.log(id, troubleTicketId);
   
     const fetchQuery = "SELECT troubleTicketId FROM supportmember WHERE id = ?";
     const updateQuery = `UPDATE supportmember SET troubleTicketId = ? WHERE id = ?`
     try {
       const [rows] = await pool.promise().query(fetchQuery, [id]);
       let existingRates = rows.length > 0 && rows[0].troubleTicketId ? JSON.parse(rows[0].troubleTicketId) : [];
-      console.log(existingRates);
   
       if (!Array.isArray(existingRates)) {
         existingRates = [];
@@ -195,7 +183,6 @@ const jwt = require("jsonwebtoken");
   
       // Append the new rate structure
       existingRates.push({ troubleTicketId });
-      console.log(existingRates);
   
       await pool.promise().query(updateQuery, [JSON.stringify(existingRates), id]);
       res.status(200).json()
@@ -209,7 +196,6 @@ const jwt = require("jsonwebtoken");
   exports.updateTroubleTicket = async (req, res) => {
     const { id } = req.params;
     const { supportEngineer } = req.body;
-    console.log(supportEngineer);
   
     const updateTest = `UPDATE troubletickets SET supportEngineer = ? WHERE id = ?`
     try {
@@ -225,7 +211,6 @@ const jwt = require("jsonwebtoken");
   exports.updateTroubleTicketStatus = (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
-    console.log(status, id);
   
     const updateTest = `UPDATE troubletickets SET status = ? WHERE id = ?`
     try {
@@ -240,7 +225,6 @@ const jwt = require("jsonwebtoken");
 
   exports.createCustomerFollowup = async (req, res) => {
     const newFollowUp = req.body;
-    console.log("newFollowUp",newFollowUp);
     
     // Basic validation
     if (!newFollowUp.userId || !newFollowUp.followupDescription) {

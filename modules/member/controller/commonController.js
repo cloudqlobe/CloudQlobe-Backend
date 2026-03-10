@@ -4,12 +4,10 @@ const saltRounds = 10;
 
 exports.getLead = async (req, res) => {
   const { id } = req.params;
-  console.log(id);
 
   const query = "SELECT * FROM customer WHERE memberId = ?";
   try {
     const [results] = await pool.promise().query(query, [id]);
-    console.log([results]);
 
     res.status(200).json({ customer: results })
   } catch (error) {
@@ -20,7 +18,6 @@ exports.getLead = async (req, res) => {
 
 exports.getLeadMember = async (req, res) => {
   const { id } = req.params;
-  console.log(id);
 
   const query = "SELECT * FROM leadmember WHERE id = ?";
   try {
@@ -60,7 +57,6 @@ exports.LeadConversion = async (req, res) => {
 };
 
 exports.createNewLead = async (req, res) => {
-  console.log(req.body);
 
   const { companyName, companyEmail, username, userEmail, password, switchIps, leadType } = req.body;
   const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -243,7 +239,6 @@ exports.getAllFollowup = async (req, res) => {
 
 exports.getCustomerFollowupsByMemberId = async (req, res) => {
   const { id } = req.params;
-  console.log(id);
 
   const query = "SELECT * FROM customerfollowup WHERE memberId = ?";
   try {
@@ -257,7 +252,6 @@ exports.getCustomerFollowupsByMemberId = async (req, res) => {
 
 exports.getCustomerFollowups = async (req, res) => {
   const { id } = req.params;
-  console.log(id);
 
   const query = "SELECT * FROM customerfollowup WHERE userId = ?";
   try {
@@ -275,7 +269,6 @@ exports.getFollowupsByCategory = async (req, res) => {
   const query = "SELECT * FROM customerfollowup WHERE followupCategory = ?";
   try {
     const [results] = await pool.promise().query(query, [id]);
-    console.log(results);
 
     res.status(200).json({ followups: results })
   } catch (error) {
@@ -286,7 +279,6 @@ exports.getFollowupsByCategory = async (req, res) => {
 
 exports.getFollowups = async (req, res) => {
   const { id } = req.params;
-  console.log(id);
 
   const query = "SELECT * FROM customerfollowup WHERE followupId = ?";
   try {
@@ -300,7 +292,6 @@ exports.getFollowups = async (req, res) => {
 
 exports.createCustomerFollowup = async (req, res) => {
   const newFollowUp = req.body;
-  console.log(newFollowUp);
 
   const insertQuery = "INSERT INTO customerfollowup SET ?";
   try {
@@ -316,7 +307,6 @@ exports.updateFollowHistory = async (req, res) => {
   const { id } = req.params;
   const { followupHistory, followupMethod, followupStatus, nextFollowupTime } = req.body;
 
-  console.log("Received Follow-up Data:", req.body);
 
   const fetchQuery = "SELECT followupHistory FROM customerfollowup WHERE followupId = ?";
   const updateQuery = `
@@ -342,7 +332,6 @@ exports.updateFollowHistory = async (req, res) => {
       id
     ]);
 
-    console.log("Updated Follow-up History:", existingHistory);
     res.status(200).json({ success: true, message: "Follow-up history updated successfully." });
 
   } catch (error) {
@@ -405,7 +394,6 @@ exports.getPrivateCCRate = async (req, res) => {
 
 exports.createPrivateCLIRate = async (req, res) => {
   const clirate = req.body;
-  console.log(clirate);
 
   const insertQuery = "INSERT INTO cli_private_rate SET ?";
   try {

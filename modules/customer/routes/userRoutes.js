@@ -20,6 +20,7 @@ router.get("/guests", listGuests);
 router.put("/guest/:id", updateGuest);
 router.put("/guest/:id/status", toggleGuestStatus);
 
+//Customer
 router.post('/customer', customerController.createCustomer);
 router.get('/customers', customerController.getAllCustomers);
 router.get('/customer/:id', customerController.getCustomer);
@@ -36,6 +37,7 @@ router.get('/testrates', customerController.getAllTestRate);
 
 router.post('/troubleticket', customerController.createTroubleTicket);
 router.get('/troubleticket', customerController.getAllTroubleTicket);
+router.get('/troubleticket/:id', customerController.getTroubleTicket);
 
 router.post('/enquiry', customerController.createCustomerEnquiry);
 router.post('/didNumber', customerController.createCustomerDidNumber);

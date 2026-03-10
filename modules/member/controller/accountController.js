@@ -6,7 +6,6 @@ const saltRounds = 10;
 
 exports.getAccountMember = async (req, res) => {
   const { id } = req.params;
-  console.log(id);
 
   const query = "SELECT * FROM accountmember WHERE id = ?";
   try {
@@ -24,7 +23,6 @@ exports.getAccountMember = async (req, res) => {
 exports.createTransaction = async (req, res) => {
   try {
     const { UserId, customerId, amount, dateAndTime, referenceNo, accountAgent, image, memberId } = req.body;
-    console.log(req.body);
 
     // Validate that all fields are provided
     if (!UserId || !customerId || !amount || !dateAndTime || !referenceNo || !accountAgent || !memberId) {
@@ -81,7 +79,6 @@ exports.getAllTransactions = async (req, res) => {
   const query = "SELECT * FROM transactions";
   try {
     const [results] = await pool.promise().query(query);
-    console.log(results);
 
     res.status(200).json({ success: true, transaction: results })
   } catch (error) {
@@ -92,7 +89,6 @@ exports.getAllTransactions = async (req, res) => {
 
 exports.getTransactions = async (req, res) => {
   const { id } = req.params;
-  console.log("id", id);
 
   const query = "SELECT * FROM transactions WHERE UserId = ?";
   try {
@@ -107,7 +103,6 @@ exports.getTransactions = async (req, res) => {
 
 exports.getTransactionsByMemberId = async (req, res) => {
   const { id } = req.params;
-  console.log("id", id);
 
   const query = "SELECT * FROM transactions WHERE memberId = ?";
   try {
@@ -123,7 +118,6 @@ exports.getTransactionsByMemberId = async (req, res) => {
 exports.updateTransactionsServiceEngineer = async (req, res) => {
   const { id } = req.params;
   const { serviceEngineer } = req.body;
-  console.log("updateEnquiry", id, serviceEngineer);
 
   const update = `UPDATE transactions SET serviceEngineer = ? WHERE _id = ?`
   try {
@@ -139,7 +133,6 @@ exports.updateTransactionsServiceEngineer = async (req, res) => {
 exports.updateMemberTransactionsId = async (req, res) => {
   const { rechargeId } = req.body;
   const { id } = req.params;
-  console.log(rechargeId, id, "updatetrsan");
 
   const fetchQuery = "SELECT recharge_ids FROM accountmember WHERE id = ?";
   const updateQuery = "UPDATE accountmember SET recharge_ids = ? WHERE id = ?";
@@ -158,7 +151,6 @@ exports.updateMemberTransactionsId = async (req, res) => {
     // Convert back to JSON and update the database
     await pool.promise().query(updateQuery, [JSON.stringify(existingRates), id]);
 
-    console.log("Updated:", existingRates);
     res.json({ success: true, message: " pickup successfully." })
   } catch (error) {
     console.error("Server error:", error);
@@ -169,13 +161,11 @@ exports.updateMemberTransactionsId = async (req, res) => {
 exports.updateTransationStatus = async (req, res) => {
   const { id } = req.params;
   const { transactionStatus } = req.body;
-  console.log(id, transactionStatus);
 
   const updateTest = `UPDATE transactions SET transactionStatus = ? WHERE _id = ?`
   try {
     const results = await pool.promise().query(updateTest, [transactionStatus, id])
     res.status(200).json()
-    console.log(results);
 
   } catch (error) {
     console.error("Server error:", error);
@@ -188,8 +178,6 @@ exports.updateTransationStatus = async (req, res) => {
 
 exports.Vendorcreate = async (req, res) => {
   try {
-    console.log("Received Vendor Data:", req.body);
-    console.log("Received File:", req.file); // Check if file is received
 
     const {
       carrierId, accountManager, serviceCategory, carrierType,
@@ -241,7 +229,6 @@ exports.getAllVendor = async (req, res) => {
   const query = "SELECT * FROM vendor";
   try {
     const [results] = await pool.promise().query(query);
-    console.log(results);
     
     res.status(200).json({ success: true, vendor: results })
   } catch (error) {
@@ -252,7 +239,6 @@ exports.getAllVendor = async (req, res) => {
 
 exports.getVendorByMemberId = async (req, res) => {
   const { id } = req.params;
-  console.log("id", id);
 
   const query = "SELECT * FROM vendor WHERE memberId = ?";
   try {
@@ -268,7 +254,6 @@ exports.getVendorByMemberId = async (req, res) => {
 exports.updateVendorServiceEngineer = async (req, res) => {
   const { id } = req.params;
   const { serviceEngineer } = req.body;
-  console.log("updateEnquiry", id, serviceEngineer);
 
   const update = `UPDATE vendor SET serviceEngineer = ? WHERE id = ?`
   try {
@@ -284,7 +269,6 @@ exports.updateVendorServiceEngineer = async (req, res) => {
 exports.updateMemberVendorsId = async (req, res) => {
   const { vendorId } = req.body;
   const { id } = req.params;
-  console.log(vendorId, id, "updatetrsan");
 
   const fetchQuery = "SELECT vendor_ids FROM accountmember WHERE id = ?";
   const updateQuery = "UPDATE accountmember SET vendor_ids = ? WHERE id = ?";
@@ -303,7 +287,6 @@ exports.updateMemberVendorsId = async (req, res) => {
     // Convert back to JSON and update the database
     await pool.promise().query(updateQuery, [JSON.stringify(existingRates), id]);
 
-    console.log("Updated:", existingRates);
     res.json({ success: true, message: " pickup successfully." })
   } catch (error) {
     console.error("Server error:", error);
@@ -314,13 +297,11 @@ exports.updateMemberVendorsId = async (req, res) => {
 exports.updateVentorStatus = async (req, res) => {
   const { id } = req.params;
   const { transactionStatus } = req.body;
-  console.log(id, transactionStatus);
 
   const updateTest = `UPDATE vendor SET status = ? WHERE id = ?`
   try {
     const results = await pool.promise().query(updateTest, [transactionStatus, id])
     res.status(200).json()
-    console.log(results);
 
   } catch (error) {
     console.error("Server error:", error);
@@ -331,7 +312,6 @@ exports.updateVentorStatus = async (req, res) => {
 exports.updateTestPrivateRateServiceEngineer = async (req, res) => {
   const { id } = req.params;
   const { account_associate } = req.body;
-  console.log("updateEnquiry", id, account_associate);
 
   const update = `UPDATE test_private_rate SET account_associate = ? WHERE _id = ?`
   try {
@@ -347,7 +327,6 @@ exports.updateTestPrivateRateServiceEngineer = async (req, res) => {
 exports.updateMemberPrivateRateId = async (req, res) => {
   const { privateRateId } = req.body;
   const { id } = req.params;
-  console.log(privateRateId, id, "updatetrsan");
 
   const fetchQuery = "SELECT privateRateId FROM accountmember WHERE id = ?";
   const updateQuery = "UPDATE accountmember SET privateRateId = ? WHERE id = ?";
@@ -366,7 +345,6 @@ exports.updateMemberPrivateRateId = async (req, res) => {
     // Convert back to JSON and update the database
     await pool.promise().query(updateQuery, [JSON.stringify(existingRates), id]);
 
-    console.log("Updated:", existingRates);
     res.json({ success: true, message: " pickup successfully." })
   } catch (error) {
     console.error("Server error:", error);
@@ -382,7 +360,6 @@ exports.updatePrivateRateStatus = async (req, res) => {
   try {
     const results = await pool.promise().query(updateTest, [status, id])
     res.status(200).json()
-    console.log(results);
 
   } catch (error) {
     console.error("Server error:", error);
@@ -392,7 +369,6 @@ exports.updatePrivateRateStatus = async (req, res) => {
 
 exports.createOverdraft = async (req, res) => {
   const overdraft = req.body;
-  console.log(overdraft);
 
   const insertQuery = "INSERT INTO overdraft SET ?";
   try {
@@ -418,7 +394,6 @@ exports.getAllOverdraft = async (req, res) => {
 exports.updateOverdraftServiceEngineer = async (req, res) => {
   const { id } = req.params;
   const { serviceEngineer } = req.body;
-  console.log("updateserviceng", id, serviceEngineer);
 
   const update = `UPDATE overdraft SET serviceEngineer = ? WHERE _id = ?`
   try {
@@ -434,7 +409,6 @@ exports.updateOverdraftServiceEngineer = async (req, res) => {
 exports.updateMemberOverdraftId = async (req, res) => {
   const { overdraftId } = req.body;
   const { id } = req.params;
-  console.log("memberoverdraft", overdraftId, id);
 
   const fetchQuery = "SELECT overdraftId FROM accountmember WHERE id = ?";
   const updateQuery = "UPDATE accountmember SET overdraftId = ? WHERE id = ?";
@@ -453,7 +427,6 @@ exports.updateMemberOverdraftId = async (req, res) => {
     // Convert back to JSON and update the database
     await pool.promise().query(updateQuery, [JSON.stringify(existingRates), id]);
 
-    console.log("Updated:", existingRates);
     res.json({ success: true, message: " pickup successfully." })
   } catch (error) {
     console.error("Server error:", error);
@@ -469,7 +442,6 @@ exports.updateOverdraftStatus = async (req, res) => {
   try {
     const results = await pool.promise().query(updateTest, [status, id])
     res.status(200).json()
-    console.log(results);
 
   } catch (error) {
     console.error("Server error:", error);
